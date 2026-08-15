@@ -13,7 +13,8 @@ export function createServerSupabase() {
   // retourner un client qui ne fait rien pour éviter les erreurs de build
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder') || supabaseAnonKey.includes('placeholder')) {
     // Retourner un mock client qui ne fait rien
-    return {
+    // Le cast as any est nécessaire ici pour éviter les erreurs de type avec notre mock simplifié
+    return ({
       auth: {
         signIn: () => Promise.reject(new Error('Supabase not configured')),
         signUp: () => Promise.reject(new Error('Supabase not configured')),
@@ -41,8 +42,8 @@ export function createServerSupabase() {
             single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
           })
         })
-      }) as any
-    };
+      })
+    }) as any;
   }
 
   return createServerClient(
@@ -77,7 +78,8 @@ export function createAdminSupabase() {
   // retourner un client qui ne fait rien pour éviter les erreurs de build
   if (!supabaseUrl || !supabaseServiceRoleKey || supabaseUrl.includes('placeholder') || supabaseServiceRoleKey.includes('placeholder')) {
     // Retourner un mock client qui ne fait rien
-    return {
+    // Le cast as any est nécessaire ici pour éviter les erreurs de type avec notre mock simplifié
+    return ({
       auth: {
         signIn: () => Promise.reject(new Error('Supabase not configured')),
         signUp: () => Promise.reject(new Error('Supabase not configured')),
@@ -105,8 +107,8 @@ export function createAdminSupabase() {
             single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
           })
         })
-      }) as any
-    };
+      })
+    }) as any;
   }
 
   return createBaseClient(
