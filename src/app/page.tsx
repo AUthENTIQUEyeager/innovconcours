@@ -3,13 +3,21 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+type Formation = {
+  id: string;
+  nom: string;
+  type_concours: string;
+  prix: number;
+  description?: string;
+};
+
 export default async function HomePage() {
   const supabase = createServerSupabase();
   const { data: formations } = await supabase
     .from("formations")
     .select("id, nom, type_concours, prix, description")
     .eq("actif", true)
-    .order("prix", { ascending: false });
+    .order("prix", { ascending: false }) as { data: { id: string; nom: string; type_concours: string; prix: number; description?: string }[] | null };
 
   return (
     <>
@@ -113,7 +121,7 @@ export default async function HomePage() {
         </p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(formations ?? []).map((f) => (
+          {(formations ?? []).map((f: Formation) => (
             <div
               key={f.id}
               className="flex flex-col justify-between rounded-lg border border-ink/10 bg-white p-5 transition hover:border-gold/60 hover:shadow-md"
