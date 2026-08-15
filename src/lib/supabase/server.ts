@@ -5,10 +5,48 @@ import { cookies } from "next/headers";
 // Client "identité" — respecte la session de l'utilisateur connecté et donc
 // les policies RLS (utilisé dans les Server Components et routes protégées).
 export function createServerSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const cookieStore = cookies();
+
+  // Si les variables d'environnement ne sont pas définies (ex: lors du build sans configuration),
+  // retourner un client qui ne fait rien pour éviter les erreurs de build
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder') || supabaseAnonKey.includes('placeholder')) {
+    // Retourner un mock client qui ne fait rien
+    return {
+      auth: {
+        signIn: () => Promise.reject(new Error('Supabase not configured')),
+        signUp: () => Promise.reject(new Error('Supabase not configured')),
+        signOut: () => Promise.resolve(),
+        session: { data: { session: null }, error: null },
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+          })
+        }),
+        insert: () => ({
+          single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+        }),
+        update: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+          })
+        }),
+        delete: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+          })
+        })
+      }) as any
+    };
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl!,
+    supabaseAnonKey!,
     {
       cookies: {
         get(name: string) {
@@ -31,9 +69,47 @@ export function createServerSupabase() {
 // manipulation client : création d'enrollment (prix fixé côté serveur),
 // écriture des paiements confirmés par FusionPay.
 export function createAdminSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Si les variables d'environnement ne sont pas définies (ex: lors du build sans configuration),
+  // retourner un client qui ne fait rien pour éviter les erreurs de build
+  if (!supabaseUrl || !supabaseServiceRoleKey || supabaseUrl.includes('placeholder') || supabaseServiceRoleKey.includes('placeholder')) {
+    // Retourner un mock client qui ne fait rien
+    return {
+      auth: {
+        signIn: () => Promise.reject(new Error('Supabase not configured')),
+        signUp: () => Promise.reject(new Error('Supabase not configured')),
+        signOut: () => Promise.resolve(),
+        session: { data: { session: null }, error: null },
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+          })
+        }),
+        insert: () => ({
+          single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+        }),
+        update: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+          })
+        }),
+        delete: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+          })
+        })
+      }) as any
+    };
+  }
+
   return createBaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl!,
+    supabaseServiceRoleKey!,
     { auth: { persistSession: false } }
   );
 }
