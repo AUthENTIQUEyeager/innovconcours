@@ -1,11 +1,17 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-// Type for mock data
+// Types for our mock data
 type MockFormation = {
   id: string;
   nom: string;
   type_concours: string;
   prix: number;
+};
+
+type MockProfile = {
+  id: string;
+  nom: string;
+  prenom: string;
 };
 
 // Utilisé dans les composants client ("use client"). Repose sur la clé anon
@@ -56,6 +62,28 @@ export function createClient() {
               };
             }
           } as any;
+        } else if (table === 'profiles') {
+          // Mock for profiles table
+          return {
+            select: (columns: string) => {
+              return {
+                eq: (column: string, value: any) => {
+                  return {
+                    single: () => {
+                      return Promise.resolve({
+                        data: {
+                          id: '1',
+                          nom: 'Doe',
+                          prenom: 'John'
+                        } as MockProfile | null,
+                        error: null
+                      });
+                    }
+                  };
+                }
+              };
+            }
+          } as any;
         } else {
           // Generic mock for other tables
           return {
@@ -63,13 +91,8 @@ export function createClient() {
               return {
                 eq: (column: string, value: any) => {
                   return {
-                    order: (column: string, options: { ascending: boolean }) => {
-                      return {
-                        then: (callback: (result: { data: any[] | null }) => void) => {
-                          callback({ data: null });
-                          return Promise.resolve({ data: null });
-                        }
-                      };
+                    single: () => {
+                      return Promise.resolve({ data: null, error: null });
                     }
                   };
                 }

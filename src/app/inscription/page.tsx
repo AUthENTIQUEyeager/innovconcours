@@ -45,7 +45,7 @@ function InscriptionForm() {
       .select("id, nom, type_concours, prix")
       .eq("actif", true)
       .order("prix", { ascending: false })
-      .then(({ data }) => setFormations(data ?? []));
+      .then(({ data }: { data: Formation[] | null }) => setFormations(data ?? []));
   }, [supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
