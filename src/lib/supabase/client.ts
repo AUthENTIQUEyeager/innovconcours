@@ -17,7 +17,8 @@ export function createClient() {
         signUp: () => Promise.reject(new Error('Supabase not configured')),
         signOut: () => Promise.resolve(),
         session: { data: { session: null }, error: null },
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        getUser: () => Promise.resolve({ data: { user: null }, error: null })
       },
       from: () => ({
         select: () => ({
