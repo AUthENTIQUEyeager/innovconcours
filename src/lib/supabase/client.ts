@@ -14,6 +14,13 @@ type MockProfile = {
   prenom: string;
 };
 
+type MockEnrollment = {
+  id: string;
+  statut: string;
+  created_at: string;
+  formations: { nom: string; prix: number } | { nom: string; prix: number }[] | null;
+};
+
 // Utilisé dans les composants client ("use client"). Repose sur la clé anon
 // + Row Level Security : un utilisateur ne peut jamais lire/écrire au-delà
 // de ce que les policies SQL autorisent, même si ce code était manipulé.
@@ -78,6 +85,37 @@ export function createClient() {
                         } as MockProfile | null,
                         error: null
                       });
+                    }
+                  };
+                }
+              };
+            }
+          } as any;
+        } else if (table === 'enrollments') {
+          // Mock for enrollments table
+          return {
+            select: (columns: string) => {
+              return {
+                order: (column: string, options: { ascending: boolean }) => {
+                  return {
+                    then: (callback: (result: { data: MockEnrollment[] | null }) => void) => {
+                      // Retourner des données d'exemple pour les inscriptions
+                      const mockData: MockEnrollment[] = [
+                        {
+                          id: 'enr1',
+                          statut: 'paye',
+                          created_at: new Date().toISOString(),
+                          formations: { nom: 'Formation JavaScript', prix: 50000 }
+                        },
+                        {
+                          id: 'enr2',
+                          statut: 'en_attente',
+                          created_at: new Date(Date.now() - 86400000).toISOString(), // yesterday
+                          formations: { nom: 'Formation Python', prix: 75000 }
+                        }
+                      ];
+                      callback({ data: mockData });
+                      return Promise.resolve({ data: mockData });
                     }
                   };
                 }

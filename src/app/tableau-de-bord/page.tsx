@@ -11,6 +11,13 @@ const statutLabels: Record<string, { label: string; className: string }> = {
   annule: { label: "Annulé", className: "text-ink/40" },
 };
 
+type Enrollment = {
+  id: string;
+  statut: string;
+  created_at: string;
+  formations: { nom: string; prix: number } | { nom: string; prix: number }[] | null;
+};
+
 export default async function TableauDeBordPage() {
   const supabase = createServerSupabase();
   const {
@@ -51,7 +58,7 @@ export default async function TableauDeBordPage() {
             </div>
           )}
 
-          {(enrollments ?? []).map((e) => {
+          {(enrollments ?? []).map((e: Enrollment) => {
             const formation = Array.isArray(e.formations) ? e.formations[0] : e.formations;
             const statut = statutLabels[e.statut] ?? statutLabels.en_attente;
             return (
