@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -20,45 +21,25 @@ type TimeSeriesData = {
 export default async function StatistiquesPage() {
   const supabase = createServerSupabase();
 
-  // Get user (assuming logged in)
+  // Get user
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    // Redirect to login if not authenticated
-    // In a real app, we would use redirect from next/navigation
-    // For simplicity, we'll show a message
-    return (
-      <>
-        <Header />
-        <section className="min-h-screen flex flex-col items-center justify-center py-12">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-ink mb-4">
-              Veuillez vous connecter
-            </h2>
-            <p className="text-lg text-ink/60">
-              Accédez à vos statistiques après connexion
-            </p>
-            <Link
-              href="/connexion"
-              className="mt-6 inline-flex items-center px-4 py-2 bg-ink text-paper rounded-full hover:bg-ink-light"
-            >
-              Se connecter
-            </Link>
-          </div>
-        </section>
-        <Footer />
-      </>
-    );
+    redirect("/connexion");
   }
 
   // Fetch user profile
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("nom, prenom")
     .eq("id", user.id)
     .single();
+
+  if (profileError) {
+    console.error("Erreur lors de la récupération du profil :", profileError);
+  }
 
   // Mock statistics data - in real implementation, replace with actual queries
   const formationStats: FormationStat[] = [
@@ -138,9 +119,7 @@ export default async function StatistiquesPage() {
             <p className="text-4xl font-bold text-gold-dark">
               {overallScore.toFixed(1)}%
             </p>
-            <p className="text-sm text-ink/50">
-              Sur toutes les formations
-            </p>
+            <p className="text-sm text-ink/50">Sur toutes les formations</p>
           </div>
           <div className="bg-white rounded-xl p-6 border border-ink/10 shadow-sm">
             <h3 className="font-display text-lg text-ink mb-3">
@@ -149,20 +128,14 @@ export default async function StatistiquesPage() {
             <p className="text-4xl font-bold text-gold-dark">
               {totalQuestions}
             </p>
-            <p className="text-sm text-ink/50">
-              Au total
-            </p>
+            <p className="text-sm text-ink/50">Au total</p>
           </div>
           <div className="bg-white rounded-xl p-6 border border-ink/10 shadow-sm">
             <h3 className="font-display text-lg text-ink mb-3">
               Jours d'activité
             </h3>
-            <p className="text-4xl font-bold text-gold-dark">
-              {daysActive}
-            </p>
-            <p className="text-sm text-ink/50">
-              Régularité
-            </p>
+            <p className="text-4xl font-bold text-gold-dark">{daysActive}</p>
+            <p className="text-sm text-ink/50">Régularité</p>
           </div>
         </div>
 
@@ -196,11 +169,10 @@ export default async function StatistiquesPage() {
                       {stat.formationNom}
                     </h3>
                     <p className="text-sm text-ink/50">
-                      Dernière activité : {
-                        new Date(stat.derniereActivite).toLocaleDateString(
-                          "fr-FR"
-                        )
-                      }
+                      Dernière activité :{" "}
+                      {new Date(stat.derniereActivite).toLocaleDateString(
+                        "fr-FR"
+                      )}
                     </p>
                   </div>
                 </div>
@@ -215,7 +187,8 @@ export default async function StatistiquesPage() {
                   </div>
                   <div className="w-full h-2 bg-ink/10 rounded-full">
                     <div
-                      className={`h-full bg-gold-dark rounded-full transition-all duration-500 w-${stat.scoreMoyen}%`}
+                      className="h-full bg-gold-dark rounded-full transition-all duration-500"
+                      style={{ width: `${stat.scoreMoyen}%` }}
                     ></div>
                   </div>
                 </div>
@@ -228,13 +201,15 @@ export default async function StatistiquesPage() {
                   </div>
                   <div className="flex">
                     <span className="w-20">Niveau :</span>
-                    <span className="
-                     ${stat.scoreMoyen >= 80
-                       ? "text-validated"
-                       : stat.scoreMoyen >= 60
-                       ? "text-gold-dark"
-                       : "text-seal"}
-                    ">
+                    <span
+                      className={
+                        stat.scoreMoyen >= 80
+                          ? "text-validated"
+                          : stat.scoreMoyen >= 60
+                          ? "text-gold-dark"
+                          : "text-seal"
+                      }
+                    >
                       {stat.scoreMoyen >= 80
                         ? "Excellent"
                         : stat.scoreMoyen >= 60
@@ -267,24 +242,26 @@ export default async function StatistiquesPage() {
             {/* In a real app, we would render a chart here using a library like Recharts or Chart.js */}
             <div className="h-96 bg-ink/5 rounded-lg border border-ink/20 flex items-center justify-center">
               <p className="text-ink/50 text-center">
-                [Graphique d'évolution du score sur le temps]\n
-                Affichage de votre progression quotidienne\n
+                [Graphique d'évolution du score sur le temps]
+                <br />
+                Affichage de votre progression quotidienne
+                <br />
                 avec moyenne mobile et objectifs
               </p>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
               <div className="text-sm text-ink/60">
-                Score de départ :
+                Score de départ :{" "}
                 <span className="font-medium text-ink">60%</span>
               </div>
               <div className="text-sm text-ink/60">
-                Score actuel :
+                Score actuel :{" "}
                 <span className="font-medium text-gold-dark">
                   {overallScore.toFixed(1)}%
                 </span>
               </div>
               <div className="text-sm text-ink/60">
-                Objectif :
+                Objectif :{" "}
                 <span className="font-medium text-gold-dark">85%</span>
               </div>
             </div>
@@ -305,15 +282,11 @@ export default async function StatistiquesPage() {
                 Vous excellez particulièrement dans :
               </p>
               <ul className="list-disc list-inside text-sm text-ink/50 space-y-1">
-                <li>
-                  Gestion budgétaire (MEF) - 85% de réussite
-                </li>
+                <li>Gestion budgétaire (MEF) - 85% de réussite</li>
                 <li>
                   Règlementation des marchés publics - 82% de réussite
                 </li>
-                <li>
-                  Comptabilité publique avancée - 80% de réussite
-                </li>
+                <li>Comptabilité publique avancée - 80% de réussite</li>
               </ul>
             </div>
 
@@ -325,15 +298,12 @@ export default async function StatistiquesPage() {
                 Concentrez vos efforts sur :
               </p>
               <ul className="list-disc list-inside text-sm text-ink/50 space-y-1">
+                <li>Droit fiscal avancé (MEF) - 55% de réussite</li>
                 <li>
-                  Droit fiscal avancé (MEF) - 55% de réussite
+                  Procédures de passation des marchés (MATM) - 58% de
+                  réussite
                 </li>
-                <li>
-                  Procédures de passation des marchés (MATM) - 58% de réussite
-                </li>
-                <li>
-                  Normes environnementales (MICA) - 60% de réussite
-                </li>
+                <li>Normes environnementales (MICA) - 60% de réussite</li>
               </ul>
               <div className="mt-4">
                 <Link
