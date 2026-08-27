@@ -57,7 +57,7 @@ export default async function HomePage() {
           {(formations ?? []).map((formation) => (
             <Link
               key={formation.id}
-              href={`/questions?formation=${formation.id}`}
+              href={`/questions/${formation.id}`}
               className="bg-white rounded-xl p-6 border border-ink/10 hover:border-gold/60 shadow-sm transition-all duration-200 hover:-translate-y-1"
             >
               <div className="flex h-12 w-12 items-center justify-center bg-gold/10 rounded-lg mb-4">
