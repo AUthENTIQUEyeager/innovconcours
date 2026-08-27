@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { createServerSupabase } from "@/lib/supabase/server";
 
 type Question = {
   id: string;
@@ -28,15 +27,11 @@ export default async function FormationTestPage({
 }: {
   params: { formationId: string };
 }) {
-  const supabase = createServerSupabase();
-  const formationId = params.formationId;
-
-  // Fetch formation details
-  const { data: formation } = await supabase
-    .from("formations")
-    .select("nom, type_concours")
-    .eq("id", formationId)
-    .single();
+  // Mock formation data
+  const formation = {
+    nom: "Formation JavaScript", // mock
+    type_concours: "Développement Web"
+  };
 
   // Fetch questions for this formation (mock data for now)
   const [questions, setQuestions] = useState<Question[]>([]);
