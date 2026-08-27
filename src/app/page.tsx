@@ -11,145 +11,195 @@ type Formation = {
   description?: string;
 };
 
+type UserStats = {
+  scoreMoyen: number;
+  serieEnCours: number;
+  questionsRepondues: number;
+};
+
 export default async function HomePage() {
   const supabase = createServerSupabase();
+
+  // Get formations
   const { data: formations } = await supabase
     .from("formations")
     .select("id, nom, type_concours, prix, description")
     .eq("actif", true)
-    .order("prix", { ascending: false }) as { data: { id: string; nom: string; type_concours: string; prix: number; description?: string }[] | null };
+    .order("prix", { ascending: false }) as { data: Formation[] | null };
+
+  // Get user stats (placeholder - would come from actual user data in real implementation)
+  const stats: UserStats = {
+    scoreMoyen: 78,
+    serieEnCours: 5,
+    questionsRepondues: 240
+  };
 
   return (
     <>
       <Header />
 
-      {/* HERO */}
-      <section className="mx-auto grid max-w-6xl gap-12 px-6 pb-20 pt-16 sm:pt-24 lg:grid-cols-2 lg:items-center">
-        <div>
-          <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-gold-dark">
-            Préparation aux concours administratifs
-          </p>
-          <h1 className="font-display text-4xl leading-[1.1] tracking-tight text-ink sm:text-5xl">
-            Votre dossier,{" "}
-            <span className="italic text-ink-light">validé</span> à l&apos;instant.
-          </h1>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-ink/70">
-            Choisissez votre ministère, payez par Mobile Money, et accédez
-            immédiatement à votre formation — sans attendre qu&apos;un
-            agent vérifie votre paiement à la main.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
+      {/* Personal greeting */}
+      <section className="mb-10">
+        <h1 className="text-3xl font-bold text-ink mb-2">
+          Bonjour, Utilisateur !
+        </h1>
+        <p className="text-lg text-ink/60">
+          Prêt à vous entraîner pour vos concours administratifs ?
+        </p>
+      </section>
+
+      {/* Quick access to matières */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold text-ink mb-6">
+          Sélectionnez une matière
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {(formations ?? []).map((formation) => (
             <Link
-              href="/inscription"
-              className="rounded-full bg-ink px-6 py-3 text-sm font-semibold text-paper transition hover:bg-ink-light"
+              key={formation.id}
+              href={`/questions?formation=${formation.id}`}
+              className="bg-white rounded-xl p-6 border border-ink/10 hover:border-gold/60 shadow-sm transition-all duration-200 hover:-translate-y-1"
             >
-              Commencer mon inscription
+              <div className="flex h-12 w-12 items-center justify-center bg-gold/10 rounded-lg mb-4">
+                {/* Matiere icon based on type */}
+                <span className="text-2xl text-gold-dark">
+                  {formation.type_concours === "Professionnel" ? "💼" : "📚"}
+                </span>
+              </div>
+              <h3 className="font-display text-lg text-ink mb-2">
+                {formation.nom}
+              </h3>
+              <p className="text-sm text-ink/50 mb-4 line-clamp-2">
+                {formation.description || `Formation pour le ${formation.nom}`}
+              </p>
+
+              {/* Progress indicator placeholder */}
+              <div className="w-full h-2 bg-ink/10 rounded-full mb-3">
+                <div
+                  className="h-full bg-gold-dark rounded-full transition-all duration-500 w-65"
+                ></div>
+              </div>
+
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-ink/60">65% maîtrisé</span>
+                <span className="font-semibold text-gold-dark">S'entraîner →</span>
+              </div>
             </Link>
+          ))}
+
+          {/* Add a button to see all formations if there are many */}
+          {(formations ?? []).length > 3 && (
             <Link
               href="/#formations"
-              className="text-sm font-semibold text-ink/70 underline decoration-gold decoration-2 underline-offset-4 hover:text-ink"
+              className="col-span-3 mt-8 text-center text-sm font-medium text-gold-dark hover:text-ink"
             >
-              Voir les formations
+              Voir toutes les formations
             </Link>
-          </div>
+          )}
         </div>
+      </section>
 
-        {/* Signature : le "dossier" tamponné — représente la validation immédiate */}
-        <div className="relative mx-auto w-full max-w-sm">
-          <div className="rotate-1 rounded-sm border border-ink/15 bg-white p-6 shadow-[0_20px_60px_-15px_rgba(18,33,59,0.25)]">
-            <div className="flex items-center justify-between border-b border-dashed border-ink/20 pb-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-ink/50">
-                Dossier n° IC-2026-00427
-              </span>
-              <span className="font-mono text-[10px] text-ink/50">MEF</span>
-            </div>
-            <div className="space-y-2 py-5">
-              <div className="h-2.5 w-3/4 rounded bg-ink/10" />
-              <div className="h-2.5 w-1/2 rounded bg-ink/10" />
-              <div className="h-2.5 w-2/3 rounded bg-ink/10" />
-            </div>
-            <div className="flex items-center justify-between border-t border-dashed border-ink/20 pt-4">
-              <span className="font-mono text-[11px] text-ink/60">30 000 F CFA</span>
-              <span className="font-mono text-[11px] text-validated">payé</span>
-            </div>
+      {/* Personal statistics */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold text-ink mb-6">
+          Votre progression
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-3">
+          <div className="bg-white rounded-xl p-6 border border-ink/10 shadow-sm">
+            <h3 className="font-display text-lg text-ink mb-3">
+              Score moyen
+            </h3>
+            <p className="text-4xl font-bold text-gold-dark">
+              {stats.scoreMoyen}%
+            </p>
+            <p className="text-sm text-ink/50">
+              Sur vos dernières sessions
+            </p>
           </div>
-          <div className="animate-stamp stamp-rotate absolute -right-4 top-1/3 flex h-24 w-24 items-center justify-center rounded-full border-4 border-seal/80 text-center">
-            <span className="font-display text-xs font-semibold uppercase leading-tight tracking-wide text-seal">
-              Validé
-            </span>
+          <div className="bg-white rounded-xl p-6 border border-ink/10 shadow-sm">
+            <h3 className="font-display text-lg text-ink mb-3">
+              Série en cours
+            </h3>
+            <p className="text-4xl font-bold text-gold-dark">
+              {stats.serieEnCours} jours
+            </p>
+            <p className="text-sm text-ink/50">
+              Sans manquer un jour
+            </p>
+          </div>
+          <div className="bg-white rounded-xl p-6 border border-ink/10 shadow-sm">
+            <h3 className="font-display text-lg text-ink mb-3">
+              Questions répondues
+            </h3>
+            <p className="text-4xl font-bold text-gold-dark">
+              {stats.questionsRepondues}
+            </p>
+            <p className="text-sm text-ink/50">
+              Au total
+            </p>
           </div>
         </div>
       </section>
 
-      {/* COMMENT CA MARCHE */}
-      <section className="border-y border-ink/10 bg-white/50">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <h2 className="font-display text-2xl text-ink">Comment ça marche</h2>
-          <div className="mt-10 grid gap-10 sm:grid-cols-3">
-            {[
-              {
-                n: "01",
-                t: "Choisissez votre ministère",
-                d: "Sélectionnez le concours et le ministère concernés — le tarif s'affiche immédiatement.",
-              },
-              {
-                n: "02",
-                t: "Payez par Mobile Money",
-                d: "Orange Money ou Moov Money, via un lien de paiement sécurisé — aucune manipulation USSD à retenir par cœur.",
-              },
-              {
-                n: "03",
-                t: "Accédez à votre espace",
-                d: "Dès le paiement confirmé, votre compte est activé automatiquement. Pas d'attente, pas de vérification manuelle.",
-              },
-            ].map((step) => (
-              <div key={step.n}>
-                <span className="font-mono text-sm text-gold-dark">{step.n}</span>
-                <h3 className="mt-2 font-display text-lg text-ink">{step.t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink/65">{step.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FORMATIONS */}
-      <section id="formations" className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="font-display text-2xl text-ink">Formations disponibles</h2>
-        <p className="mt-2 max-w-lg text-sm text-ink/65">
-          Un tarif par ministère, affiché sans surprise avant l&apos;inscription.
+      {/* Test/Exam simulation section */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold text-ink mb-6">
+          Tests blancs
+        </h2>
+        <p className="text-sm text-ink/60 mb-6">
+          Simulez les conditions réelles du concours avec des chronométrages
+          et une évaluation complète de vos performances.
         </p>
+        <Link
+          href="/tests"
+          className="inline-flex items-center px-6 py-3 bg-ink text-paper rounded-full hover:bg-ink-light transition-shadow"
+        >
+          Commencer un test blanc
+          <span className="ml-3">→</span>
+        </Link>
+      </section>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(formations ?? []).map((f: Formation) => (
-            <div
-              key={f.id}
-              className="flex flex-col justify-between rounded-lg border border-ink/10 bg-white p-5 transition hover:border-gold/60 hover:shadow-md"
-            >
-              <div>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-ink/40">
-                  {f.type_concours}
-                </span>
-                <h3 className="mt-1 font-display text-lg text-ink">{f.nom}</h3>
-                {f.description && (
-                  <p className="mt-1 text-xs leading-relaxed text-ink/55">
-                    {f.description}
-                  </p>
-                )}
+      {/* Recent activity / recommendations */}
+      <section>
+        <h2 className="text-2xl font-semibold text-ink mb-6">
+          Recommandations pour vous
+        </h2>
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl p-5 border border-ink/10 shadow-sm">
+            <div className="flex items-start space-x-4">
+              <div className="flex h-10 w-10 items-center justify-center bg-gold/20 rounded-lg">
+                <span className="text-gold-dark">📝</span>
               </div>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="font-mono text-sm font-medium text-ink">
-                  {f.prix.toLocaleString("fr-FR")} F CFA
-                </span>
-                <Link
-                  href={`/inscription?formation=${f.id}`}
-                  className="text-xs font-semibold text-gold-dark hover:text-ink"
-                >
-                  Choisir →
-                </Link>
+              <div>
+                <h3 className="font-display text-lg text-ink mb-1">
+                  Révisez les bases du MEF
+                </h3>
+                <p className="text-sm text-ink/60">
+                  Vous avez eu des difficultés récemment sur les questions de
+                  comptabilité publique. Une révision ciblée pourrait améliorer
+                  votre score de 15 points.
+                </p>
               </div>
             </div>
-          ))}
+          </div>
+
+          <div className="bg-white rounded-xl p-5 border border-ink/10 shadow-sm">
+            <div className="flex items-start space-x-4">
+              <div className="flex h-10 w-10 items-center justify-center bg-gold/20 rounded-lg">
+                <span className="text-gold-dark">⏱️</span>
+              </div>
+              <div>
+                <h3 className="font-display text-lg text-ink mb-1">
+                  Améliorez votre rapidité
+                </h3>
+                <p className="text-sm text-ink/60">
+                  Votre temps moyen par question est de 45 secondes. Essayez de
+                  le réduire à 35 secondes pour être plus à l'aise lors des
+                  épreuves chronométrées.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
