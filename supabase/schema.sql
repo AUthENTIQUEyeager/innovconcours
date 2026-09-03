@@ -143,3 +143,190 @@ insert into public.formations (nom, type_concours, prix, description) values
   ('GÉNÉRALITÉS', 'Direct', 15000, 'Préparation générale aux concours directs'),
   ('AF2026', 'Direct', 5000, 'Formation d''appui 2026')
 on conflict do nothing;
+
+-- ---------- CATEGORIES ----------
+create table if not exists public.categories (
+  id uuid primary key default gen_random_uuid(),
+  nom text not null,
+  icone text, -- optional emoji or icon class
+  created_at timestamptz not null default now()
+);
+
+alter table public.categories enable row level security;
+
+-- Everyone can see categories (maybe only active? but we keep simple)
+create policy "categories_select_public" on public.categories
+  for select using (true);
+
+-- Only admins can insert/update/delete
+create policy "categories_admin_all" on public.categories
+  for all using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- Add categorie_id to formations
+alter table public.formations
+  add column if not exists categorie_id uuid references public.categories(id);
+
+-- Optionally add index for performance
+create index if not exists idx_formations_categorie_id on public.formations(categorie_id);
+
+-- ---------- RESOURCES ----------
+-- Table pour stocker les ressources pédagogiques (images, PDF)
+create table if not exists public.resources (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  type text not null check (type in ('image', 'pdf')),
+  file_path text not null, -- chemin dans le bucket Supabase Storage
+  category_id uuid references public.categories(id),
+  formation_id uuid references public.formations(id),
+  uploaded_by uuid not null references public.profiles(id),
+  file_size integer, -- taille en bytes
+  mime_type text, -- type MIME du fichier
+  created_at timestamptz not null default now()
+);
+
+alter table public.resources enable row level security;
+
+-- Tout le monde peut voir les ressources (à affiner par formation/paiement si nécessaire)
+create policy "resources_select_public" on public.resources
+  for select using (true);
+
+-- Seuls les admins peuvent créer/modifier/supprimer des ressources
+create policy "resources_admin_all" on public.resources
+  for all using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- Optionally add indexes for performance
+create index if not exists idx_resources_category_id on public.resources(category_id);
+create index if not exists idx_resources_formation_id on public.resources(formation_id);
+create index if not exists idx_resources_uploaded_by on public.resources(uploaded_by);
+create index if not exists idx_resources_type on public.resources(type);
+
+-- ---------- POLLS (SONDAGES) ----------
+create table if not exists public.polls (
+  id uuid primary key default gen_random_uuid(),
+  question text not null,
+  description text,
+  status text not null check (status in ('draft', 'published', 'closed')) default 'draft',
+  created_by uuid not null references public.profiles(id),
+  created_at timestamptz not null default now(),
+  closed_at timestamptz
+);
+
+alter table public.polls enable row level security;
+
+-- Tout le monde peut voir les sondages publiés
+create policy "polls_select_published" on public.polls
+  for select using (status = 'published');
+
+-- Seulement les admins peuvent voir tous les sondages (pour l'admin panel)
+create policy "polls_select_admin" on public.polls
+  for select using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- Seuls les admins peuvent créer/modifier/supprimer des sondages
+-- (les routes /api/admin/sondages et les server actions utilisent la clé
+-- service_role qui contourne RLS ; cette policy est une protection en
+-- profondeur si jamais un appel passait par le client anon un jour)
+create policy "polls_admin_write" on public.polls
+  for all using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  )
+  with check (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- ---------- POLL OPTIONS ----------
+create table if not exists public.poll_options (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references public.polls(id) on delete cascade,
+  text text not null,
+  position integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.poll_options enable row level security;
+
+-- Tout le monde peut voir les options des sondages publiés
+create policy "poll_options_select_published" on public.poll_options
+  for select using (
+    exists (
+      select 1 from public.polls p
+      where p.id = poll_id and p.status = 'published'
+    )
+  );
+
+-- Seulement les admins peuvent gérer les options (pour l'admin panel)
+create policy "poll_options_select_admin" on public.poll_options
+  for select using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- Seuls les admins peuvent créer/modifier/supprimer des options
+create policy "poll_options_admin_write" on public.poll_options
+  for all using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  )
+  with check (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- ---------- POLL VOTES ----------
+create table if not exists public.poll_votes (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references public.polls(id) on delete cascade,
+  option_id uuid not null references public.poll_options(id) on delete cascade,
+  user_id uuid not null references public.profiles(id),
+  created_at timestamptz not null default now(),
+  unique(poll_id, user_id) -- Contrainte pour empêcher le double vote
+);
+
+alter table public.poll_votes enable row level security;
+
+-- Les utilisateurs peuvent voir leurs propres votes
+create policy "poll_votes_select_own" on public.poll_votes
+  for select using (auth.uid() = user_id);
+
+-- Les utilisateurs peuvent créer leurs propres votes.
+-- Le double vote est déjà empêché par la contrainte unique(poll_id, user_id)
+-- ci-dessus.
+create policy "poll_votes_insert_own" on public.poll_votes
+  for insert with check (auth.uid() = user_id);
+
+-- Seulement les admins peuvent voir tous les votes (pour les résultats)
+create policy "poll_votes_select_admin" on public.poll_votes
+  for select using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
+
+-- ---------- INDEXES pour la performance ----------
+create index if not exists idx_polls_status on public.polls(status);
+create index if not exists idx_polls_created_by on public.polls(created_by);
+create index if not exists idx_poll_options_poll_id on public.poll_options(poll_id);
+create index if not exists idx_poll_votes_poll_id on public.poll_votes(poll_id);
+create index if not exists idx_poll_votes_user_id on public.poll_votes(user_id);
+
+-- ---------- RÉSULTATS AGRÉGÉS ----------
+-- Renvoie uniquement des comptages par option (jamais les user_id
+-- individuels) pour contourner proprement le fait que poll_votes_select_own
+-- ne laisse chacun voir que son propre vote.
+create or replace function public.get_poll_results(poll_id_param uuid)
+returns table (option_id uuid, vote_count bigint)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select pv.option_id, count(*)::bigint as vote_count
+  from public.poll_votes pv
+  join public.polls p on p.id = pv.poll_id
+  where pv.poll_id = poll_id_param
+    and p.status in ('published', 'closed')
+  group by pv.option_id;
+$$;
+
+grant execute on function public.get_poll_results(uuid) to anon, authenticated;
