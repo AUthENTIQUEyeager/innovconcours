@@ -1,8 +1,11 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Select } from '@/components/ui/Select';
 import Link from 'next/link';
 import { BiFile, BiImage } from 'react-icons/bi';
 
@@ -35,7 +38,25 @@ export default function NewResourcePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Catégories et formations réelles, récupérées depuis la base
+  // (auparavant : options factices codées en dur, category_id/formation_id
+  // envoyés n'étaient jamais de vrais UUID de la base).
+  const [categories, setCategories] = useState<Array<{ id: string; nom: string }>>([]);
+  const [formations, setFormations] = useState<Array<{ id: string; nom: string; type_concours: string }>>([]);
+
   const supabase = createClient();
+
+  useEffect(() => {
+    const fetchLookups = async () => {
+      const [{ data: categoriesData }, { data: formationsData }] = await Promise.all([
+        supabase.from('categories').select('id, nom').order('nom'),
+        supabase.from('formations').select('id, nom, type_concours').eq('actif', true).order('nom'),
+      ]);
+      setCategories(categoriesData ?? []);
+      setFormations(formationsData ?? []);
+    };
+    fetchLookups();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,6 +123,12 @@ export default function NewResourcePage() {
         throw new Error('Veuillez sélectionner un fichier.');
       }
 
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        throw new Error('Votre session a expiré, veuillez vous reconnecter.');
+      }
+
       // Generate a unique file name
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 8);
@@ -114,7 +141,7 @@ export default function NewResourcePage() {
       const filePath = `${form.type === 'image' ? 'images' : 'pdf'}/${fileName}`;
 
       // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('resources')
         .upload(filePath, form.file, {
           cacheControl: '3600',
@@ -126,7 +153,7 @@ export default function NewResourcePage() {
       }
 
       // Insert resource record
-      const { data: resourceData, error: dbError } = await supabase
+      const { error: dbError } = await supabase
         .from('resources')
         .insert({
           title: form.title.trim(),
@@ -135,7 +162,7 @@ export default function NewResourcePage() {
           file_path: filePath,
           category_id: form.categoryId || null,
           formation_id: form.formationId || null,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id || null, // In a real app, we would get the user ID from auth
+          uploaded_by: userId,
           file_size: form.fileSize,
           mime_type: form.mimeType
         })
@@ -173,165 +200,138 @@ export default function NewResourcePage() {
     }
   };
 
-  // Fetch categories and formations for dropdowns
-  const [categories, setCategories] = useState<Array<{id: string; nom: string}> | null>(null);
-  const [formations, setFormations] = useState<Array<{id: string; nom: string; type_concours: string}> | null>(null);
-
-  // We'll fetch these in a useEffect, but since we're in a server component, we need to do it on the client.
-  // For simplicity, we'll fetch them in the component using useEffect and a client-side supabase client.
-  // However, we are using the admin supabase client which is server-only. Let's create a client supabase for fetching lookup data.
-  // We'll create a separate client supabase instance for lookups.
-
-  // Since we are in a client component (due to useState and useEffect), we can use the regular supabase client.
-  // Let's import the client supabase.
-
-  // We'll do the fetching in a separate useEffect for client-side data.
-
-  // For brevity, we'll skip the fetching of categories and formations in this example and assume they are passed as props or we use mock data.
-  // In a real implementation, we would fetch them.
-
-  // We'll use mock data for now to demonstrate the UI.
-  // In a real app, you would fetch these from the database.
-
   return (
     <section className="mx-auto max-w-4xl px-6 py-12">
       <div className="mb-6">
         <Link
           href="/admin/resources"
-          className="txt txt-sm txt-ink/60 hover:txt-ink"
+          className="text-sm text-ink/60 hover:text-ink"
         >
           ← Retour à la liste des ressources
         </Link>
-        <h1 className="txt txt-2xl font-semibold txt-ink mb-2">
+        <h1 className="mt-2 text-2xl font-semibold text-ink mb-2">
           Nouvelle ressource
         </h1>
-        <p className="txt txt-sm txt-ink/60">
+        <p className="text-sm text-ink/60">
           Ajoutez une nouvelle ressource pédagogique (image ou PDF).
         </p>
       </div>
 
       {error && (
-        <div className="alert alert-error mb-4">
+        <p className="mb-4 rounded-md bg-seal/10 px-4 py-3 text-sm text-seal">
           {error}
-        </div>
+        </p>
       )}
 
       {success && (
-        <div className="alert alert-success mb-4">
+        <p className="mb-4 rounded-md bg-validated/10 px-4 py-3 text-sm text-validated">
           {success}
-        </div>
+        </p>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="label txt-font-medium">Type de ressource *</label>
-          <select
-            value={form.type}
-            onChange={handleTypeChange}
-            className="select select-bordered w-full"
-          >
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/60">
+            Type de ressource *
+          </span>
+          <Select value={form.type} onChange={handleTypeChange}>
             <option value="">-- Sélectionner un type --</option>
             <option value="image">Image</option>
             <option value="pdf">PDF</option>
-          </select>
-        </div>
+          </Select>
+        </label>
 
         {form.type && (
           <div>
-            <div>
-              <label className="label txt-font-medium">Fichier *</label>
-              <div className="file-input file-input-bordered w-full">
-                <input
-                  type="file"
-                  accept={form.type === 'image' ? 'image/*' : '.pdf'}
-                  onChange={handleFileChange}
-                  className="file-input-input"
-                />
-                <div className="file-input-file">
-                  <div className="flex items-center space-x-2">
-                    {form.type === 'image' ? <BiImage className="h-4 w-4" /> : <BiFile className="h-4 w-4" />}
-                    <span className="file-input-name">
-                      {form.file ? form.file.name : 'Aucun fichier sélectionné'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {form.previewUrl && form.type === 'image' && (
-                <div className="mt-2">
-                  <img
-                    src={form.previewUrl}
-                    alt="Preview"
-                    className="rounded max-w-xs h-auto"
-                  />
-                </div>
-              )}
-              {form.fileSize && form.mimeType && (
-                <p className="txt txt-xs txt-ink/60 mt-1">
-                  Taille : {(form.fileSize / 1024).toFixed(1)} Ko • Type : {form.mimeType}
-                </p>
-              )}
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/60">
+              Fichier *
+            </span>
+            <div className="flex items-center gap-3 rounded-md border border-dashed border-ink/30 px-4 py-3">
+              {form.type === 'image' ? <BiImage className="h-5 w-5 text-ink/40" /> : <BiFile className="h-5 w-5 text-ink/40" />}
+              <input
+                type="file"
+                accept={form.type === 'image' ? 'image/*' : '.pdf'}
+                onChange={handleFileChange}
+                className="flex-1 text-sm text-ink/70 file:mr-3 file:rounded-md file:border-0 file:bg-ink/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-ink/20"
+              />
             </div>
+            {form.previewUrl && form.type === 'image' && (
+              <div className="mt-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.previewUrl}
+                  alt="Aperçu"
+                  className="rounded max-w-xs h-auto"
+                />
+              </div>
+            )}
+            {form.fileSize && form.mimeType && (
+              <p className="text-xs text-ink/60 mt-1">
+                Taille : {(form.fileSize / 1024).toFixed(1)} Ko • Type : {form.mimeType}
+              </p>
+            )}
           </div>
         )}
 
-        <div>
-          <label className="label txt-font-medium">Titre *</label>
-          <input
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/60">
+            Titre *
+          </span>
+          <Input
             type="text"
             value={form.title}
             onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
-            className="input input-bordered w-full"
             placeholder="Entrez le titre de la ressource"
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="label txt-font-medium">Description</label>
-          <textarea
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/60">
+            Description
+          </span>
+          <Textarea
             value={form.description}
             onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-            className="textarea textarea-bordered w-full"
             rows={4}
             placeholder="Entrez une description détaillée (optionnel)"
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="label txt-font-medium">Catégorie</label>
-          <select
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/60">
+            Catégorie
+          </span>
+          <Select
             value={form.categoryId ?? ''}
             onChange={(e) => setForm(prev => ({ ...prev, categoryId: e.target.value || null }))}
-            className="select select-bordered w-full"
           >
             <option value="">-- Aucune catégorie --</option>
-            {/* In a real app, we would map over categories */}
-            <option value="cat1">Mathématiques</option>
-            <option value="cat2">Physique</option>
-            <option value="cat3">Informatique
-</option>
-          </select>
-        </div>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.nom}</option>
+            ))}
+          </Select>
+        </label>
 
-        <div>
-          <label className="label txt-font-medium">Formation associée</label>
-          <select
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/60">
+            Formation associée
+          </span>
+          <Select
             value={form.formationId ?? ''}
             onChange={(e) => setForm(prev => ({ ...prev, formationId: e.target.value || null }))}
-            className="select select-bordered w-full"
           >
-            <option value="">-- Ressource générale --</option>
-            {/* In a real app, we would map over formations */}
-            <option value="form1">MEF - Ministère de l'Économie et des Finances</option>
-            <option value="form2">GÉNÉRALITÉS - Préparation générale aux concours directs</option>
-          </select>
-        </div>
+            <option value="">-- Ressource générale (visible par tous les inscrits) --</option>
+            {formations.map((f) => (
+              <option key={f.id} value={f.id}>{f.nom} ({f.type_concours})</option>
+            ))}
+          </Select>
+          <p className="text-xs text-ink/60 mt-1">
+            Si une formation est sélectionnée, seuls les inscrits payants de cette formation verront la ressource.
+          </p>
+        </label>
 
         <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="btn btn-primary"
-          >
+          <Button type="submit" disabled={loading}>
             {loading ? 'Ajout en cours...' : 'Ajouter la ressource'}
           </Button>
         </div>

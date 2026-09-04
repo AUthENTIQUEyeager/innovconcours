@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
@@ -30,13 +28,14 @@ interface Resource {
   } | null;
 }
 
-export default async function ResourceDetailPage() {
+export default function ResourceDetailPage() {
   const params = useParams<{ type: string; id: string }>();
   const router = useRouter();
   const { type, id } = params;
 
   const supabase = createClient();
   const [resource, setResource] = useState<Resource | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +66,18 @@ export default async function ResourceDetailPage() {
         }
 
         setResource(data);
+
+        // Le bucket est privé (accès réservé aux inscrits) : il faut une URL
+        // signée, une URL publique ne fonctionnerait pas.
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from('resources')
+          .createSignedUrl(data.file_path, 60 * 60); // valide 1h
+
+        if (signedError) {
+          throw signedError;
+        }
+
+        setFileUrl(signedData.signedUrl);
         setLoading(false);
       } catch (err: any) {
         console.error('Error fetching resource:', err);
@@ -133,12 +144,6 @@ export default async function ResourceDetailPage() {
     );
   }
 
-  const getFileUrl = () => {
-    // In a real app, we would get the public URL from Supabase Storage
-    // For now, we use a placeholder
-    return `/storage/v1/object/public/resources/${resource.file_path}`;
-  };
-
   const getIcon = () => {
     if (resource.type === 'image') {
       return <BiImage className="h-5 w-5" />;
@@ -175,11 +180,13 @@ export default async function ResourceDetailPage() {
           </div>
           <div className="flex-1">
             <div className="text-center">
-              {resource.type === 'image' ? (
+              {!fileUrl ? (
+                <p className="text-sm text-ink/50">Préparation du fichier...</p>
+              ) : resource.type === 'image' ? (
                 <div className="relative">
-                  {/* In a real app, we would use next/image for optimization */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={getFileUrl()}
+                    src={fileUrl}
                     alt={resource.title}
                     className="rounded-lg shadow-md max-w-full h-auto"
                     style={{ maxHeight: '500px', objectFit: 'contain' }}
@@ -191,7 +198,7 @@ export default async function ResourceDetailPage() {
                     <BiFile className="h-12 w-12 text-seal" />
                   </div>
                   <p className="text-sm text-ink/60">
-                    <a href={getFileUrl()} target="_blank" rel="noopener noreferrer" className="text-gold-dark hover:text-ink">
+                    <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-gold-dark hover:text-ink">
                       Télécharger le PDF
                     </a>
                   </p>

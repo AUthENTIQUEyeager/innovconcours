@@ -28,7 +28,7 @@ export default async function TableauDeBordPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("nom, prenom")
+    .select("nom, prenom, role")
     .eq("id", user.id)
     .single();
 
@@ -47,6 +47,15 @@ export default async function TableauDeBordPage() {
           Bonjour {profile?.prenom ?? ""}
         </h1>
         <p className="mt-2 text-sm text-ink/65">Vos formations et leur statut.</p>
+
+        {profile?.role === "admin" && (
+          <Link
+            href="/admin"
+            className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-gold-dark hover:underline"
+          >
+            → Accéder au panneau d'administration
+          </Link>
+        )}
 
         <div className="mt-8 divide-y divide-ink/10 rounded-lg border border-ink/10 bg-white">
           {(enrollments ?? []).length === 0 && (

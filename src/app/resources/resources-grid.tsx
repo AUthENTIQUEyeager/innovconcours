@@ -56,63 +56,51 @@ export default function ResourcesGrid({ resources }: ResourcesGridProps) {
 
   const plural = filteredResources.length !== 1;
 
-  if (filteredResources.length === 0) {
-    return (
-      <section className="mx-auto max-w-4xl px-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-ink mb-4">
-            Ressources pédagogiques
-          </h2>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="text"
-                placeholder="Rechercher une ressource..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input input-sm w-full sm:w-48"
-              />
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as any)}
-                className="input input-sm w-full sm:w-48"
-              >
-                <option value="all">Tous les types</option>
-                <option value="image">Images</option>
-                <option value="pdf">PDF</option>
-              </select>
-              {/* Category filter will be populated when categories are available */}
-              <select
-                value={categoryFilter ?? ''}
-                onChange={(e) => setCategoryFilter(e.target.value || null)}
-                className="input input-sm w-full sm:w-48"
-              >
-                <option value="">Toutes les catégories</option>
-                {/* Options will be dynamically added if we had categories in props */}
-                {/* For now, we leave it empty - in a real implementation we would pass categories */}
-              </select>
-            </div>
-            <p className="text-sm text-ink/60">
-              {filteredResources.length} ressource{plural ? 's' : ''} trouvée{plural ? 's' : ''}
-            </p>
+  return (
+    <section className="mx-auto max-w-4xl px-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-ink mb-4">
+          Ressources pédagogiques
+        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Rechercher une ressource..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input w-full sm:w-48"
+            />
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+              className="input w-full sm:w-48"
+            >
+              <option value="all">Tous les types</option>
+              <option value="image">Images</option>
+              <option value="pdf">PDF</option>
+            </select>
           </div>
+          <p className="text-sm text-ink/60">
+            {filteredResources.length} ressource{plural ? 's' : ''} trouvée{plural ? 's' : ''}
+          </p>
         </div>
+      </div>
 
-        {filteredResources.length === 0 ? (
-          <EmptyState
-            title="Aucune ressource disponible"
-            description="Aucune ressource ne correspond à vos critères de recherche."
-          />
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredResources.map((resource) => (
-              <ResourceCard key={resource.id} resource={resource} />
-            ))}
-          </div>
-        )}
-      </section>
-    );
-  }
+      {filteredResources.length === 0 ? (
+        <EmptyState
+          title="Aucune ressource disponible"
+          description="Aucune ressource ne correspond à vos critères de recherche."
+        />
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredResources.map((resource) => (
+            <ResourceCard key={resource.id} resource={resource} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 interface ResourceCardProps {

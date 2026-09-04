@@ -2,10 +2,9 @@
 
 import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { BiFile, BiImage, BiTrash, BiEdit } from 'react-icons/bi';
-import { Card } from '@/components/ui/Card';
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
+import { BiFile, BiImage, BiTrash } from 'react-icons/bi';
 import { redirect } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
 
 interface Resource {
   id: string;
@@ -109,6 +108,7 @@ export default async function AdminResourcesPage() {
   }
 
   async function deleteResource(formData: FormData) {
+    'use server';
     const id = formData.get('id') as string;
     if (!id) return;
     const supabase = createServerSupabase();
@@ -166,52 +166,52 @@ export default async function AdminResourcesPage() {
       </div>
 
       {resources.length === 0 ? (
-        <div className="alert alert-info">
+        <div className="rounded-md bg-ink/5 px-4 py-3 text-sm text-ink/70">
           Aucune ressource disponible. Commencez par ajouter une nouvelle ressource.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="table table-zebra">
-            <thead>
+        <div className="overflow-x-auto rounded-lg border border-ink/10">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-ink/5 text-xs uppercase tracking-wide text-ink/60">
               <tr>
-                <th>Titre</th>
-                <th>Type</th>
-                <th>Catégorie</th>
-                <th>Formation</th>
-                <th>Taille</th>
-                <th>Date</th>
-                <th className="w-20">Actions</th>
+                <th className="px-4 py-3">Titre</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Catégorie</th>
+                <th className="px-4 py-3">Formation</th>
+                <th className="px-4 py-3">Taille</th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3 w-20">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-ink/10">
               {resources.map((resource) => (
                 <tr key={resource.id}>
-                  <td>{resource.title}</td>
-                  <td>
+                  <td className="px-4 py-3">{resource.title}</td>
+                  <td className="px-4 py-3">
                     {resource.type === 'image' ? (
                       <BiImage className="h-4 w-4 text-gold-dark" />
                     ) : (
                       <BiFile className="h-4 w-4 text-seal" />
                     )}
                   </td>
-                  <td>
+                  <td className="px-4 py-3">
                     {resource.categories ? resource.categories.nom : 'Aucune'}
                   </td>
-                  <td>
+                  <td className="px-4 py-3">
                     {resource.formations ? resource.formations.nom : 'Générale'}
                   </td>
-                  <td>
+                  <td className="px-4 py-3">
                     {resource.file_size ? `${(resource.file_size / 1024).toFixed(1)} KB` : 'Inconnue'}
                   </td>
-                  <td>
+                  <td className="px-4 py-3">
                     {new Date(resource.created_at).toLocaleDateString('fr-FR')}
                   </td>
-                  <td>
-                    <form action={deleteResource} method="POST" className="flex flex-col sm:flex-row gap-2">
+                  <td className="px-4 py-3">
+                    <form action={deleteResource} method="POST">
                       <input type="hidden" name="id" value={resource.id} />
-                      <button type="submit" className="btn btn-xs btn-outline btn-error">
+                      <Button type="submit" variant="danger" size="sm">
                         <BiTrash className="h-4 w-4" /> Supprimer
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 </tr>
