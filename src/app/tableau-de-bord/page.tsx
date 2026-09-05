@@ -26,7 +26,7 @@ export default async function TableauDeBordPage() {
 
   if (!user) redirect("/connexion");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("nom, prenom, role")
     .eq("id", user.id)
@@ -46,6 +46,11 @@ export default async function TableauDeBordPage() {
         <h1 className="font-display text-3xl text-ink">
           Bonjour {profile?.prenom ?? ""}
         </h1>
+        {profileError && (
+          <p className="mt-2 rounded-md bg-seal/10 px-4 py-3 text-sm text-seal">
+            [Diagnostic temporaire] Erreur profil : {profileError.message} (code: {profileError.code}) — user.id: {user.id}
+          </p>
+        )}
         <p className="mt-2 text-sm text-ink/65">Vos formations et leur statut.</p>
 
         {profile?.role === "admin" && (
