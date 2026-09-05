@@ -37,7 +37,12 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (formationError || !formation || !formation.actif) {
-    return NextResponse.json({ error: "Formation introuvable" }, { status: 404 });
+    return NextResponse.json(
+      {
+        error: `Formation introuvable (id reçu: "${formationId}", erreur DB: ${formationError?.message ?? "aucune"}, trouvée: ${!!formation}, actif: ${formation?.actif}) — diagnostic temporaire, à retirer ensuite`,
+      },
+      { status: 404 }
+    );
   }
 
   const { data: profile } = await admin
