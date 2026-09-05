@@ -37,12 +37,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (formationError || !formation || !formation.actif) {
-    return NextResponse.json(
-      {
-        error: `Formation introuvable (id reçu: "${formationId}", erreur DB: ${formationError?.message ?? "aucune"}, trouvée: ${!!formation}, actif: ${formation?.actif}) — diagnostic temporaire, à retirer ensuite`,
-      },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Formation introuvable" }, { status: 404 });
   }
 
   const { data: profile } = await admin
@@ -70,6 +65,25 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Générer le lien de paiement FusionPay pour ce montant exact.
+  //
+  // MODE TEST TEMPORAIRE : si DISABLE_PAYMENT_TEMP=true est défini dans les
+  // variables d'environnement, on saute complètement FusionPay et on marque
+  // l'inscription comme payée directement, pour pouvoir tester le reste du
+  // site (accès aux ressources/sondages réservés aux inscrits) sans avoir
+  // FusionPay configuré. Désactivé par défaut — retire cette variable
+  // d'environnement (ou remets-la à autre chose que "true") pour réactiver
+  // le vrai paiement, sans repasser par du code.
+  if (process.env.DISABLE_PAYMENT_TEMP === "true") {
+    await admin
+      .from("enrollments")
+      .update({ statut: "paye" })
+      .eq("id", enrollment.id);
+
+    return NextResponse.json({
+      paymentUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/paiement/retour?enrollment=${enrollment.id}`,
+    });
+  }
+
   try {
     const payment = await createPaymentLink({
       montant: formation.prix,
